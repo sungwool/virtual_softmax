@@ -1,56 +1,29 @@
 import os
-import pandas as pd
-import seaborn as sn
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
-from IPython.core.display import display
-from pl_bolts.datamodules import CIFAR10DataModule
-from pl_bolts.transforms.dataset_normalizations import cifar10_normalization
-from pytorch_lightning import LightningModule, Trainer, seed_everything
+from pytorch_lightning import seed_everything
+from tools import LitResnet, CifarDataModule
+import numpy as np
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import tensorflow as tf
+import tensorboard as tb
+tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
+import tensorflow as tf
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import CSVLogger
-from torch.optim.lr_scheduler import OneCycleLR
-from torchmetrics.functional import accuracy
-from tools import LitResnet
 
 seed_everything(7)
-
 PATH_DATASETS = os.environ.get("PATH_DATASETS", "data")
 BATCH_SIZE = 256 if torch.cuda.is_available() else 64
 NUM_WORKERS = int(os.cpu_count() / 2)
 
-train_transforms = torchvision.transforms.Compose(
-    [
-        torchvision.transforms.RandomCrop(32, padding=4),
-        torchvision.transforms.RandomHorizontalFlip(),
-        torchvision.transforms.ToTensor(),
-        cifar10_normalization(),
-    ]
-)
-
-test_transforms = torchvision.transforms.Compose(
-    [
-        torchvision.transforms.ToTensor(),
-        cifar10_normalization(),
-    ]
-)
-
-cifar10_dm = CIFAR10DataModule(
-    data_dir=PATH_DATASETS,
-    batch_size=BATCH_SIZE,
-    num_workers=NUM_WORKERS,
-    train_transforms=train_transforms,
-    test_transforms=test_transforms,
-    val_transforms=test_transforms,
-)
-    
+cifar10_dm = CifarDataModule()
 model = LitResnet(lr=0.1)
 
 trainer = Trainer(
-    max_epochs=30,
+    max_epochs=50,
     accelerator="auto",
     devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
     logger=CSVLogger(save_dir="logs/"),
@@ -60,8 +33,21 @@ trainer = Trainer(
 trainer.fit(model, cifar10_dm)
 trainer.test(model, datamodule=cifar10_dm)
 
-metrics = pd.read_csv(f"{trainer.logger.log_dir}/metrics.csv")
-del metrics["step"]
-metrics.set_index("epoch", inplace=True)
-display(metrics.dropna(axis=1, how="all").head())
-sn.relplot(data=metrics, kind="line")
+model = model.load_from_checkpoint(f"logs/lightning_logs/version_21/checkpoints/epoch=0-step=176.ckpt")
+
+embeddings = np.empty([0, 512])
+labels = np.empty([0])
+images = np.empty([0, 3, 32, 32])
+for i, (x, y) in enumerate(tqdm(cifar10_dm.test_dataloader())):
+    out = model.get_embeddings(x).detach().numpy()
+    embeddings = np.append(embeddings, out, axis=0)
+    images = np.append(images, x, axis=0)
+    labels = np.append(labels, y, axis=0)
+    
+    if i > 2:
+        break
+
+writer = SummaryWriter()
+writer.add_embedding(embeddings,
+                     metadata=labels,
+                     label_img=torch.tensor(images))
