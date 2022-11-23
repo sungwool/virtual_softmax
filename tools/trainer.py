@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import OneCycleLR
 from torchmetrics.functional import accuracy
 from .network import create_model, virtual_layer
 
-BATCH_SIZE = 256 if torch.cuda.is_available() else 64
+BATCH_SIZE = 100
 
 class LitResnet(LightningModule):
     def __init__(self, lr=0.05):
@@ -53,22 +53,23 @@ class LitResnet(LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(
+        optimizer = torch.optim.Adam(
             self.parameters(),
             lr=self.hparams.lr,
-            momentum=0.9,
-            weight_decay=5e-4,
+            # momentum=0.9,
+            # weight_decay=5e-4,
         )
         steps_per_epoch = 45000 // BATCH_SIZE
+        
         scheduler_dict = {
             "scheduler": OneCycleLR(
                 optimizer,
-                0.1,
+                0.01,
                 epochs=self.trainer.max_epochs,
                 steps_per_epoch=steps_per_epoch,
             ),
             "interval": "step",
         }
-        return {"optimizer": optimizer}
+        
         return {"optimizer": optimizer, "lr_scheduler": scheduler_dict}
     

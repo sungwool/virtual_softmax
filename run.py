@@ -16,14 +16,14 @@ from pytorch_lightning.loggers import CSVLogger
 
 seed_everything(7)
 PATH_DATASETS = os.environ.get("PATH_DATASETS", "data")
-BATCH_SIZE = 256 if torch.cuda.is_available() else 64
+BATCH_SIZE = 100
 NUM_WORKERS = int(os.cpu_count() / 2)
 
 cifar10_dm = CifarDataModule()
-model = LitResnet(lr=0.1)
+model = LitResnet(lr=0.01)
 
 trainer = Trainer(
-    max_epochs=50,
+    max_epochs=200,
     accelerator="auto",
     devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
     logger=CSVLogger(save_dir="logs/"),
@@ -31,9 +31,6 @@ trainer = Trainer(
 )
 
 trainer.fit(model, cifar10_dm)
-trainer.test(model, datamodule=cifar10_dm)
-
-model = model.load_from_checkpoint(f"logs/lightning_logs/version_21/checkpoints/epoch=0-step=176.ckpt")
 
 embeddings = np.empty([0, 512])
 labels = np.empty([0])
@@ -48,6 +45,9 @@ for i, (x, y) in enumerate(tqdm(cifar10_dm.test_dataloader())):
         break
 
 writer = SummaryWriter()
+# writer.add_embedding(embeddings,
+#                      metadata=labels,
+#                      label_img=torch.tensor(images))
+
 writer.add_embedding(embeddings,
-                     metadata=labels,
-                     label_img=torch.tensor(images))
+                     metadata=labels)
