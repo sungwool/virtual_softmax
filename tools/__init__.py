@@ -1,2 +1,2 @@
 from .trainer import LitResnet
-from .dataloader import CifarDataModule
+from .dataloader import CifarDataModule, MNISTDataModule

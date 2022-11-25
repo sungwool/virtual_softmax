@@ -13,11 +13,12 @@ class LitResnet(LightningModule):
 
         self.save_hyperparameters()
         self.model = create_model()
-        self.fc = virtual_layer(num_classes=10)
+        self.fc = virtual_layer(num_classes=2)
         
     def forward(self, x, y):
         out = self.model(x)
         out = self.fc(out, y)
+        
         return F.log_softmax(out, dim=1)
     
     def get_embeddings(self, x):
@@ -53,18 +54,18 @@ class LitResnet(LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.SGD(
             self.parameters(),
             lr=self.hparams.lr,
-            # momentum=0.9,
-            # weight_decay=5e-4,
-        )
+            momentum=0.9,
+            weight_decay=1e-3,)
+        
         steps_per_epoch = 45000 // BATCH_SIZE
         
         scheduler_dict = {
             "scheduler": OneCycleLR(
                 optimizer,
-                0.01,
+                self.hparams.lr,
                 epochs=self.trainer.max_epochs,
                 steps_per_epoch=steps_per_epoch,
             ),
