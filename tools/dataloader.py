@@ -69,10 +69,10 @@ class MNISTDataModule(pl.LightningDataModule):
         
         self.prepare_data()
         self.mnist_test = MNIST(self.data_dir, train=False, transform=self.transform_test)
-        idx = (self.mnist_test.targets == 2) | (self.mnist_test.targets == 5)
+        idx = (self.mnist_test.targets == 4) | (self.mnist_test.targets == 9)
         self.mnist_test.targets = self.mnist_test.targets[idx]
         self.mnist_test.data    = self.mnist_test.data[idx]
-        self.mnist_test.targets = torch.where(self.mnist_test.targets==2, 0, 1)
+        self.mnist_test.targets = torch.where(self.mnist_test.targets==4, 0, 1)
             
     #Download data
     def prepare_data(self):
@@ -84,12 +84,13 @@ class MNISTDataModule(pl.LightningDataModule):
         if stage == 'fit' or stage is None:
             mnist_full = MNIST(self.data_dir, train=True, transform=self.transform_train)
             
-            idx = (mnist_full.targets == 2) | (mnist_full.targets == 5)
+            idx = (mnist_full.targets == 4) | (mnist_full.targets == 9)
             mnist_full.targets = mnist_full.targets[idx]
             mnist_full.data    = mnist_full.data[idx]
-            mnist_full.targets = torch.where(mnist_full.targets==2, 0, 1)
+            mnist_full.targets = torch.where(mnist_full.targets==4, 0, 1)
             
-            self.mnist_train, self.mnist_val = random_split(mnist_full, [10000, 1379])
+            print(mnist_full)
+            self.mnist_train, self.mnist_val = random_split(mnist_full, [10000, 1791])
             
             
     def train_dataloader(self):

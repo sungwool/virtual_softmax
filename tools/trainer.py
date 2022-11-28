@@ -13,12 +13,11 @@ class LitResnet(LightningModule):
 
         self.save_hyperparameters()
         self.model = create_model()
-        self.fc = virtual_layer(num_classes=2)
+        self.fc = virtual_layer(num_classes=10)
         
     def forward(self, x, y):
         out = self.model(x)
         out = self.fc(out, y)
-        
         return F.log_softmax(out, dim=1)
     
     def get_embeddings(self, x):
