@@ -6,5 +6,5 @@ PyTorch implementation of "Virtual Class Enhanced Discriminative Embedding Learn
 
 The effect of virtual softmax is shown in the figure below:
 <p align="center">
-<img src="results.jpg" alt="architecture" width="875px">
+<img src="results.png" alt="architecture" width="475px">
 </p>
